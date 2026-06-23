@@ -1,0 +1,36 @@
+name: Test notification inputs (token, title, notify_issue, sticky_comment, notify_check)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create old file
+        run: echo "hello world" > /tmp/old.txt
+
+      - name: Create new file
+        run: echo "hello world" > /tmp/new.txt
+
+      - id: action
+        uses: .
+        with:
+          old: /tmp/old.txt
+          new: /tmp/new.txt
+          token: fake-token-for-coverage
+          title: "Test Title"
+          notify_issue: "false"
+          sticky_comment: "false"
+          notify_check: "false"
+
+      - name: Assert passed is true
+        env:
+          ACTUAL: ${{ steps.action.outputs.passed }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected 'true' but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"

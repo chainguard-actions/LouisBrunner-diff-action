@@ -1,0 +1,47 @@
+name: Test output file writing
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: diff
+        uses: .
+        with:
+          old: ${{ github.workspace }}/fixtures/file1_basic.txt
+          new: ${{ github.workspace }}/fixtures/file4_added.txt
+          mode: strict
+          tolerance: same
+          output: /tmp/diff_output.txt
+        continue-on-error: true
+
+      - name: Assert output file was created
+        run: |
+          if [ ! -f /tmp/diff_output.txt ]; then
+            echo "FAIL: output file /tmp/diff_output.txt was not created"
+            exit 1
+          fi
+          echo "Output file contents:"
+          cat /tmp/diff_output.txt
+          echo "PASS"
+
+      - name: Assert output file is not empty
+        run: |
+          if [ ! -s /tmp/diff_output.txt ]; then
+            echo "FAIL: output file is empty"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert passed is false (files differ)
+        env:
+          ACTUAL: ${{ steps.diff.outputs.passed }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ "$ACTUAL" != "false" ]; then
+            echo "FAIL: expected 'false' but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"

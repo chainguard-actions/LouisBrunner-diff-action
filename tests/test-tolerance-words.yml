@@ -1,0 +1,27 @@
+name: Test tolerance with addition mode (more lines is better)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: diff
+        uses: .
+        with:
+          old: ${{ github.workspace }}/fixtures/file1_basic.txt
+          new: ${{ github.workspace }}/fixtures/file4_added.txt
+          mode: addition
+          tolerance: better
+
+      - name: Assert passed is true (new file has more lines = improvement in addition mode)
+        env:
+          ACTUAL: ${{ steps.diff.outputs.passed }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected 'true' but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"

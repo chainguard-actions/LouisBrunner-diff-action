@@ -1,0 +1,39 @@
+name: Test different files (strict mode)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: diff
+        uses: .
+        with:
+          old: ${{ github.workspace }}/fixtures/file1_basic.txt
+          new: ${{ github.workspace }}/fixtures/file4_added.txt
+          mode: strict
+          tolerance: same
+        continue-on-error: true
+
+      - name: Assert passed is false
+        env:
+          ACTUAL: ${{ steps.diff.outputs.passed }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ "$ACTUAL" != "false" ]; then
+            echo "FAIL: expected 'false' but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert output contains diff content
+        env:
+          ACTUAL: ${{ steps.diff.outputs.output }}
+        run: |
+          echo "actual: '$ACTUAL'"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected non-empty diff output"
+            exit 1
+          fi
+          echo "PASS"
