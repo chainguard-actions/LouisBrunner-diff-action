@@ -1,0 +1,43 @@
+name: Test output file writing
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create test files with differences
+        run: |
+          printf "alpha\nbeta\ngamma\n" > /tmp/old_output.txt
+          printf "alpha\nbeta\ngamma\ndelta\nepsilon\n" > /tmp/new_output.txt
+
+      - id: diff
+        uses: .
+        with:
+          old: /tmp/old_output.txt
+          new: /tmp/new_output.txt
+          mode: addition
+          tolerance: better
+          output: /tmp/diff_result.txt
+
+      - name: Assert output file was created
+        run: |
+          if [ ! -f /tmp/diff_result.txt ]; then
+            echo "FAIL: output file /tmp/diff_result.txt was not created"
+            exit 1
+          fi
+          echo "Output file contents:"
+          cat /tmp/diff_result.txt
+          echo "PASS"
+
+      - name: Assert output step output is set
+        env:
+          ACTUAL: ${{ steps.diff.outputs.output }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected non-empty output"
+            exit 1
+          fi
+          echo "PASS"

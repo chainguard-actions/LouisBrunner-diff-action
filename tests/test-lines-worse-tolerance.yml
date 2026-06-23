@@ -1,0 +1,32 @@
+name: Test deletion mode with worse tolerance
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create test files where new has more lines (worse in deletion mode)
+        run: |
+          printf "line1\nline2\n" > /tmp/old_worse.txt
+          printf "line1\nline2\nline3\nline4\nline5\n" > /tmp/new_worse.txt
+
+      - id: diff
+        uses: .
+        with:
+          old: /tmp/old_worse.txt
+          new: /tmp/new_worse.txt
+          mode: deletion
+          tolerance: worse
+
+      - name: Assert passed is true (worse tolerance allows regression)
+        env:
+          ACTUAL: ${{ steps.diff.outputs.passed }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected 'true' with 'worse' tolerance but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"

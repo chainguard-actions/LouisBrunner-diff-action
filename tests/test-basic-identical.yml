@@ -1,0 +1,34 @@
+name: Test basic identical files
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create identical test files
+        run: |
+          echo "line1" > /tmp/file_a.txt
+          echo "line2" >> /tmp/file_a.txt
+          echo "line3" >> /tmp/file_a.txt
+          cp /tmp/file_a.txt /tmp/file_b.txt
+
+      - id: diff
+        uses: .
+        with:
+          old: /tmp/file_a.txt
+          new: /tmp/file_b.txt
+          mode: deletion
+          tolerance: same
+
+      - name: Assert passed is true
+        env:
+          ACTUAL: ${{ steps.diff.outputs.passed }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected 'true' but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"

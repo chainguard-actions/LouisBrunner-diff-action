@@ -1,0 +1,37 @@
+name: Test notification inputs (token, title, notify_issue, notify_check)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create identical test files
+        run: |
+          echo "line1" > /tmp/old-notify.txt
+          echo "line1" > /tmp/new-notify.txt
+
+      - id: action
+        uses: .
+        with:
+          old: /tmp/old-notify.txt
+          new: /tmp/new-notify.txt
+          mode: lines
+          tolerance: better
+          token: fake-token-for-coverage
+          title: "Test Diff Title"
+          notify_issue: "false"
+          notify_check: "false"
+        continue-on-error: true
+
+      - name: Assert passed output is set
+        env:
+          ACTUAL: ${{ steps.action.outputs.passed }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected 'passed' output to be set"
+            exit 1
+          fi
+          echo "PASS: passed=$ACTUAL"
