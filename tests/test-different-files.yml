@@ -1,0 +1,44 @@
+name: Test different files (strict mode)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create fixture files
+        run: |
+          printf 'A\nB\nC\nD\n' > /tmp/file_old.txt
+          printf 'A\nB\nC\nD\nE\n' > /tmp/file_new.txt
+
+      - id: diff
+        uses: .
+        with:
+          old: /tmp/file_old.txt
+          new: /tmp/file_new.txt
+          mode: strict
+          tolerance: same
+        continue-on-error: true
+
+      - name: Assert passed is false
+        env:
+          ACTUAL: ${{ steps.diff.outputs.passed }}
+        run: |
+          echo "actual passed: $ACTUAL"
+          if [ "$ACTUAL" != "false" ]; then
+            echo "FAIL: expected passed=false for different files in strict mode"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert output is non-empty (has diff)
+        env:
+          ACTUAL: ${{ steps.diff.outputs.output }}
+        run: |
+          echo "actual output: '$ACTUAL'"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected non-empty output for different files"
+            exit 1
+          fi
+          echo "PASS"

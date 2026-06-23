@@ -1,0 +1,58 @@
+name: Test tolerance mode (deletion)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create fixture files
+        run: |
+          # file_base: 4 lines (A,B,C,D)
+          printf 'A\nB\nC\nD\n' > /tmp/file_base.txt
+          # file_deleted: 3 lines (A,C,D) - one line removed
+          printf 'A\nC\nD\n' > /tmp/file_deleted.txt
+          # file_added: 5 lines (A,B,C,D,E) - one line added
+          printf 'A\nB\nC\nD\nE\n' > /tmp/file_added.txt
+
+      # In deletion mode: fewer lines in new file = Better => passes with tolerance=same
+      - id: diff_improved
+        uses: .
+        with:
+          old: /tmp/file_base.txt
+          new: /tmp/file_deleted.txt
+          mode: deletion
+          tolerance: same
+
+      - name: Assert passed is true when new file has fewer lines (improved in deletion mode)
+        env:
+          ACTUAL: ${{ steps.diff_improved.outputs.passed }}
+        run: |
+          echo "actual passed: $ACTUAL"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected passed=true when new file has fewer lines in deletion mode"
+            exit 1
+          fi
+          echo "PASS"
+
+      # In deletion mode: more lines in new file = Worse => fails with tolerance=same
+      - id: diff_regressed
+        uses: .
+        with:
+          old: /tmp/file_base.txt
+          new: /tmp/file_added.txt
+          mode: deletion
+          tolerance: same
+        continue-on-error: true
+
+      - name: Assert passed is false when new file has more lines (regression in deletion mode)
+        env:
+          ACTUAL: ${{ steps.diff_regressed.outputs.passed }}
+        run: |
+          echo "actual passed: $ACTUAL"
+          if [ "$ACTUAL" != "false" ]; then
+            echo "FAIL: expected passed=false when new file has more lines in deletion mode"
+            exit 1
+          fi
+          echo "PASS"

@@ -1,0 +1,38 @@
+name: Test notification inputs (token, title, notify_issue, sticky_comment, notify_check)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create fixture files
+        run: |
+          printf 'A\nB\nC\n' > /tmp/notif_old.txt
+          printf 'A\nB\nC\n' > /tmp/notif_new.txt
+
+      - id: diff
+        uses: .
+        with:
+          old: /tmp/notif_old.txt
+          new: /tmp/notif_new.txt
+          mode: strict
+          tolerance: same
+          token: fake-token-for-coverage
+          title: "Test Diff Title"
+          notify_issue: "false"
+          sticky_comment: "false"
+          notify_check: "false"
+        continue-on-error: true
+
+      - name: Assert passed output is present
+        env:
+          ACTUAL: ${{ steps.diff.outputs.passed }}
+        run: |
+          echo "actual passed: $ACTUAL"
+          if [ "$ACTUAL" != "true" ] && [ "$ACTUAL" != "false" ]; then
+            echo "FAIL: expected passed to be 'true' or 'false', got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS: passed output is present"
