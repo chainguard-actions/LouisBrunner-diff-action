@@ -1,0 +1,32 @@
+name: Test tolerance better mode
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create fixture files
+        run: |
+          printf 'A\nB\nC\nD\n' > /tmp/file_old.txt
+          printf 'A\nC\nD\n' > /tmp/file_new.txt
+
+      - id: action
+        uses: .
+        with:
+          old: /tmp/file_old.txt
+          new: /tmp/file_new.txt
+          mode: deletion
+          tolerance: better
+
+      - name: Assert passed output is true when new file has deletions in deletion mode
+        env:
+          ACTUAL: ${{ steps.action.outputs.passed }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected 'true' but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"
