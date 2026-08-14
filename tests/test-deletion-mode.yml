@@ -1,0 +1,45 @@
+name: Test deletion mode with removed lines
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create test files (new has fewer lines = better in deletion mode)
+        run: |
+          printf "A\nB\nC\nD\n" > /tmp/old.txt
+          printf "A\nC\nD\n" > /tmp/new.txt
+
+      - id: action
+        uses: .
+        with:
+          old: /tmp/old.txt
+          new: /tmp/new.txt
+          mode: deletion
+          tolerance: better
+
+      - name: Assert passed is true (deletions are better in deletion mode)
+        env:
+          ACTUAL: ${{ steps.action.outputs.passed }}
+        run: |
+          echo "actual passed: $ACTUAL"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected passed=true but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS: correctly identified deletions as better in deletion mode"
+
+      - name: Assert output contains diff
+        env:
+          ACTUAL: ${{ steps.action.outputs.output }}
+        run: |
+          echo "actual output: $ACTUAL"
+          NORM="$(echo "$ACTUAL" | tr -d '[:space:]')"
+          if [ -z "$NORM" ] || [ "$NORM" = "{}" ] || [ "$NORM" = "null" ] \
+             || echo "$ACTUAL" | grep -qiE 'no .*(change|diff)'; then
+            echo "FAIL: expected a diff but got empty/no-diff: $ACTUAL"
+            exit 1
+          fi
+          echo "PASS: diff output is present"

@@ -1,4 +1,4 @@
-name: Test output file writing
+name: Test output file feature
 on:
   workflow_dispatch:
 jobs:
@@ -7,48 +7,48 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create fixture files
+      - name: Create test files with differences
         run: |
-          printf 'A\nB\nC\nD\n' > /tmp/file_old.txt
-          printf 'A\nB\nC\nD\nE\n' > /tmp/file_new.txt
+          printf "A\nB\nC\nD\n" > /tmp/old.txt
+          printf "A\nB\nC\nD\nE\n" > /tmp/new.txt
 
       - id: action
         uses: .
         with:
-          old: /tmp/file_old.txt
-          new: /tmp/file_new.txt
+          old: /tmp/old.txt
+          new: /tmp/new.txt
           mode: addition
-          tolerance: better
-          output: /tmp/diff_output.txt
+          tolerance: same
+          output: /tmp/diff-output.txt
+        continue-on-error: true
 
       - name: Assert output file was created
         run: |
-          if [ ! -f /tmp/diff_output.txt ]; then
-            echo "FAIL: output file /tmp/diff_output.txt was not created"
+          if [ ! -f /tmp/diff-output.txt ]; then
+            echo "FAIL: output file /tmp/diff-output.txt was not created"
             exit 1
           fi
-          echo "Output file contents:"
-          cat /tmp/diff_output.txt
           echo "PASS: output file exists"
 
-      - name: Assert output step output is non-empty
+      - name: Assert output file contains diff content
+        run: |
+          CONTENT="$(cat /tmp/diff-output.txt)"
+          echo "output file content: $CONTENT"
+          NORM="$(echo "$CONTENT" | tr -d '[:space:]')"
+          if [ -z "$NORM" ] || [ "$NORM" = "{}" ] || [ "$NORM" = "null" ] \
+             || echo "$CONTENT" | grep -qiE 'no .*(change|diff)'; then
+            echo "FAIL: expected diff content in output file but got: $CONTENT"
+            exit 1
+          fi
+          echo "PASS: output file contains diff content"
+
+      - name: Assert step output is non-empty
         env:
           ACTUAL: ${{ steps.action.outputs.output }}
         run: |
-          echo "actual output: $ACTUAL"
+          echo "step output: $ACTUAL"
           if [ -z "$ACTUAL" ]; then
-            echo "FAIL: expected non-empty output but got empty string"
+            echo "FAIL: expected non-empty step output"
             exit 1
           fi
-          echo "PASS"
-
-      - name: Assert passed output is true
-        env:
-          ACTUAL: ${{ steps.action.outputs.passed }}
-        run: |
-          echo "actual: $ACTUAL"
-          if [ "$ACTUAL" != "true" ]; then
-            echo "FAIL: expected 'true' but got '$ACTUAL'"
-            exit 1
-          fi
-          echo "PASS"
+          echo "PASS: step output is non-empty"

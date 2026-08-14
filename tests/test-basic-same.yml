@@ -1,0 +1,43 @@
+name: Test basic same files (strict mode)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create identical test files
+        run: |
+          printf "A\nB\nC\nD\n" > /tmp/old.txt
+          printf "A\nB\nC\nD\n" > /tmp/new.txt
+
+      - id: action
+        uses: .
+        with:
+          old: /tmp/old.txt
+          new: /tmp/new.txt
+          mode: strict
+          tolerance: same
+
+      - name: Assert passed is true
+        env:
+          ACTUAL: ${{ steps.action.outputs.passed }}
+        run: |
+          echo "actual passed: $ACTUAL"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected passed=true but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert output is non-empty
+        env:
+          ACTUAL: ${{ steps.action.outputs.output }}
+        run: |
+          echo "actual output: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected non-empty output (patch header)"
+            exit 1
+          fi
+          echo "PASS: output is non-empty as expected"

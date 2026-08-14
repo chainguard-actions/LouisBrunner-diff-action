@@ -1,0 +1,45 @@
+name: Test worse tolerance (most permissive - always passes)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create test files where new is worse (additions in deletion mode)
+        run: |
+          # In deletion mode, additions are "worse"
+          printf "A\nB\nC\n" > /tmp/old.txt
+          printf "A\nB\nC\nD\nE\n" > /tmp/new.txt
+
+      - id: action
+        uses: .
+        with:
+          old: /tmp/old.txt
+          new: /tmp/new.txt
+          mode: deletion
+          tolerance: worse
+        # tolerance=worse means any result passes
+
+      - name: Assert passed is true (worse tolerance accepts any result)
+        env:
+          ACTUAL: ${{ steps.action.outputs.passed }}
+        run: |
+          echo "actual passed: $ACTUAL"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected passed=true with tolerance=worse but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS: worse tolerance correctly accepts any diff result"
+
+      - name: Assert output is non-empty
+        env:
+          ACTUAL: ${{ steps.action.outputs.output }}
+        run: |
+          echo "actual output: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected non-empty output"
+            exit 1
+          fi
+          echo "PASS: output is non-empty"

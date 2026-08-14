@@ -7,24 +7,23 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create fixture files
+      - name: Create identical test files
         run: |
-          printf 'A\nB\nC\nD\n' > /tmp/file_old.txt
-          printf 'A\nB\nC\nD\n' > /tmp/file_new.txt
+          echo "line1" > /tmp/old-notify.txt
+          echo "line1" > /tmp/new-notify.txt
 
       - id: action
         uses: .
         with:
-          old: /tmp/file_old.txt
-          new: /tmp/file_new.txt
+          old: /tmp/old-notify.txt
+          new: /tmp/new-notify.txt
           mode: strict
           tolerance: same
-          token: fake-token-for-testing
-          title: "Test Diff Title"
+          token: ${{ github.token }}
+          title: "Test Notification Title"
           notify_issue: "false"
           sticky_comment: "false"
           notify_check: "false"
-        continue-on-error: true
 
       - name: Assert passed output is true
         env:
@@ -32,7 +31,7 @@ jobs:
         run: |
           echo "actual: $ACTUAL"
           if [ "$ACTUAL" != "true" ]; then
-            echo "FAIL: expected 'true' but got '$ACTUAL'"
+            echo "FAIL: expected passed=true for identical files"
             exit 1
           fi
           echo "PASS"
