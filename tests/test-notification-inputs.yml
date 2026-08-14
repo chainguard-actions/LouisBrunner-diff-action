@@ -7,30 +7,47 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create old file
-        run: echo "hello world" > /tmp/old.txt
-
-      - name: Create new file
-        run: echo "hello world" > /tmp/new.txt
+      - name: Create identical test files
+        run: |
+          echo "line1" > /tmp/file-a.txt
+          echo "line2" >> /tmp/file-a.txt
+          echo "line3" >> /tmp/file-a.txt
+          cp /tmp/file-a.txt /tmp/file-b.txt
 
       - id: action
         uses: .
         with:
-          old: /tmp/old.txt
-          new: /tmp/new.txt
-          token: fake-token-for-coverage
-          title: "Test Title"
-          notify_issue: "false"
-          sticky_comment: "false"
-          notify_check: "false"
+          old: /tmp/file-a.txt
+          new: /tmp/file-b.txt
+          mode: strict
+          tolerance: same
+          token: ${{ github.token }}
+          title: "Test Notification Title"
+          notify_issue: "true"
+          sticky_comment: "true"
+          notify_check: "true"
 
       - name: Assert passed is true
         env:
           ACTUAL: ${{ steps.action.outputs.passed }}
         run: |
-          echo "actual: $ACTUAL"
+          echo "actual passed: $ACTUAL"
           if [ "$ACTUAL" != "true" ]; then
-            echo "FAIL: expected 'true' but got '$ACTUAL'"
+            echo "FAIL: expected passed=true but got '$ACTUAL'"
             exit 1
           fi
           echo "PASS"
+
+      - name: Assert output is empty (no diff between identical files)
+        env:
+          ACTUAL: ${{ steps.action.outputs.output }}
+        run: |
+          echo "actual output: '$ACTUAL'"
+          NORM="$(echo "$ACTUAL" | tr -d '[:space:]')"
+          if [ -z "$NORM" ] || [ "$NORM" = "{}" ] || [ "$NORM" = "null" ] \
+             || echo "$ACTUAL" | grep -qiE 'no .*(change|diff)'; then
+            echo "PASS: no diff as expected"
+          else
+            echo "FAIL: expected no diff but got: $ACTUAL"
+            exit 1
+          fi

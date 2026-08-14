@@ -1,0 +1,33 @@
+name: Test tolerance worse fails
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create test files where new is larger (worse in deletion mode)
+        run: |
+          printf "line1\nline2\nline3\n" > /tmp/old_small.txt
+          printf "line1\nline2\nline3\nline4\nline5\n" > /tmp/new_big.txt
+
+      - id: diff
+        uses: .
+        continue-on-error: true
+        with:
+          old: /tmp/old_small.txt
+          new: /tmp/new_big.txt
+          mode: deletion
+          tolerance: better
+
+      - name: Assert passed is false (new file is larger, worse in deletion mode with better tolerance)
+        env:
+          ACTUAL: ${{ steps.diff.outputs.passed }}
+        run: |
+          echo "actual passed: $ACTUAL"
+          if [ "$ACTUAL" != "false" ]; then
+            echo "FAIL: expected passed=false with tolerance=better when new file is larger in deletion mode, got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"
