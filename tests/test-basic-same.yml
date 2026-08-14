@@ -1,4 +1,4 @@
-name: Test notification inputs (token, title, notify_issue, sticky_comment, notify_check)
+name: Test basic same files (strict mode)
 on:
   workflow_dispatch:
 jobs:
@@ -7,31 +7,32 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create identical test files
-        run: |
-          echo "line1" > /tmp/file-a.txt
-          echo "line1" > /tmp/file-b.txt
-
       - id: action
         uses: .
         with:
-          old: /tmp/file-a.txt
-          new: /tmp/file-b.txt
+          old: ${{ github.workspace }}/fixtures/file1_basic.txt
+          new: ${{ github.workspace }}/fixtures/file3_same.txt
           mode: strict
           tolerance: same
-          token: ${{ github.token }}
-          title: "Test Notification Title"
-          notify_issue: "false"
-          sticky_comment: "false"
-          notify_check: "false"
 
-      - name: Assert passed output is true
+      - name: Assert passed is true
         env:
           ACTUAL: ${{ steps.action.outputs.passed }}
         run: |
           echo "actual passed: $ACTUAL"
           if [ "$ACTUAL" != "true" ]; then
             echo "FAIL: expected passed=true but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert output is non-empty (diff text produced)
+        env:
+          ACTUAL: ${{ steps.action.outputs.output }}
+        run: |
+          echo "actual output: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected non-empty output"
             exit 1
           fi
           echo "PASS"
