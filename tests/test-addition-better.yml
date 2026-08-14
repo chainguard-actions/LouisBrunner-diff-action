@@ -1,0 +1,43 @@
+name: Test addition mode - lines added is better
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create test fixture files
+        run: |
+          printf 'line1\nline2\nline3\nline4\n' > /tmp/file-base.txt
+          printf 'line1\nline2\nline3\nline4\nline5\nline6\n' > /tmp/file-more-lines.txt
+
+      - id: diff
+        uses: .
+        with:
+          old: /tmp/file-base.txt
+          new: /tmp/file-more-lines.txt
+          mode: addition
+          tolerance: better
+
+      - name: Assert passed is true (more lines = better in addition mode)
+        env:
+          ACTUAL: ${{ steps.diff.outputs.passed }}
+        run: |
+          echo "actual passed: $ACTUAL"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected passed=true when lines are added in addition mode with tolerance=better"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert output contains diff markers
+        env:
+          ACTUAL: ${{ steps.diff.outputs.output }}
+        run: |
+          echo "actual output: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected non-empty diff output"
+            exit 1
+          fi
+          echo "PASS"

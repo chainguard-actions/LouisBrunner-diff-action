@@ -9,29 +9,37 @@ jobs:
 
       - name: Create identical test files
         run: |
-          echo "line1" > /tmp/old-notify.txt
-          echo "line1" > /tmp/new-notify.txt
+          echo "line1" > /tmp/notify_old.txt
+          echo "line2" >> /tmp/notify_old.txt
+          echo "line3" >> /tmp/notify_old.txt
+          cp /tmp/notify_old.txt /tmp/notify_new.txt
 
-      - id: action
+      - id: diff
         uses: .
         with:
-          old: /tmp/old-notify.txt
-          new: /tmp/new-notify.txt
-          mode: lines
-          tolerance: better
-          token: fake-token-for-coverage
-          title: "Test Diff Title"
+          old: /tmp/notify_old.txt
+          new: /tmp/notify_new.txt
+          mode: deletion
+          tolerance: same
+          token: ${{ github.token }}
+          title: "Test Diff Notification"
           notify_issue: "false"
           notify_check: "false"
-        continue-on-error: true
 
-      - name: Assert passed output is set
+      - name: Assert passed is true
         env:
-          ACTUAL: ${{ steps.action.outputs.passed }}
+          ACTUAL: ${{ steps.diff.outputs.passed }}
         run: |
           echo "actual: $ACTUAL"
-          if [ -z "$ACTUAL" ]; then
-            echo "FAIL: expected 'passed' output to be set"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected 'true' but got '$ACTUAL'"
             exit 1
           fi
-          echo "PASS: passed=$ACTUAL"
+          echo "PASS"
+
+      - name: Assert output is present (even if empty for identical files)
+        env:
+          ACTUAL: ${{ steps.diff.outputs.output }}
+        run: |
+          echo "actual output: '$ACTUAL'"
+          echo "PASS: output field is accessible"

@@ -7,37 +7,45 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create test files with differences
+      - name: Create test fixture files
         run: |
-          printf "alpha\nbeta\ngamma\n" > /tmp/old_output.txt
-          printf "alpha\nbeta\ngamma\ndelta\nepsilon\n" > /tmp/new_output.txt
+          printf 'alpha\nbeta\ngamma\n' > /tmp/file-output-old.txt
+          printf 'alpha\nbeta\ngamma\ndelta\n' > /tmp/file-output-new.txt
 
       - id: diff
         uses: .
         with:
-          old: /tmp/old_output.txt
-          new: /tmp/new_output.txt
+          old: /tmp/file-output-old.txt
+          new: /tmp/file-output-new.txt
           mode: addition
           tolerance: better
-          output: /tmp/diff_result.txt
+          output: /tmp/diff-result.txt
+
+      - name: Assert passed output is true
+        env:
+          ACTUAL: ${{ steps.diff.outputs.passed }}
+        run: |
+          echo "actual passed: $ACTUAL"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected passed=true"
+            exit 1
+          fi
+          echo "PASS"
 
       - name: Assert output file was created
         run: |
-          if [ ! -f /tmp/diff_result.txt ]; then
-            echo "FAIL: output file /tmp/diff_result.txt was not created"
+          if [ ! -f "/tmp/diff-result.txt" ]; then
+            echo "FAIL: expected output file /tmp/diff-result.txt to exist"
             exit 1
           fi
-          echo "Output file contents:"
-          cat /tmp/diff_result.txt
-          echo "PASS"
+          echo "PASS: output file exists"
 
-      - name: Assert output step output is set
-        env:
-          ACTUAL: ${{ steps.diff.outputs.output }}
+      - name: Assert output file is non-empty
         run: |
-          echo "actual: $ACTUAL"
-          if [ -z "$ACTUAL" ]; then
-            echo "FAIL: expected non-empty output"
+          CONTENT=$(cat "/tmp/diff-result.txt")
+          echo "output file content: $CONTENT"
+          if [ -z "$CONTENT" ]; then
+            echo "FAIL: expected output file to be non-empty"
             exit 1
           fi
-          echo "PASS"
+          echo "PASS: output file has content"

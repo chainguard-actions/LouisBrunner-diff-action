@@ -1,0 +1,66 @@
+name: Test with committed fixture files
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create test fixture files
+        run: |
+          printf 'line1\nline2\nline3\nline4\n' > /tmp/file-base.txt
+          printf 'line1\nline2\nline3\nline4\n' > /tmp/file-same.txt
+          printf 'line1\nline2\n' > /tmp/file-fewer-lines.txt
+
+      - name: Show fixture file contents
+        run: |
+          echo "=== file-base.txt ==="
+          cat /tmp/file-base.txt
+          echo "=== file-same.txt ==="
+          cat /tmp/file-same.txt
+
+      - id: diff-same
+        uses: .
+        with:
+          old: /tmp/file-base.txt
+          new: /tmp/file-same.txt
+          mode: addition
+          tolerance: same
+
+      - name: Assert identical fixture files pass with tolerance=same
+        env:
+          ACTUAL: ${{ steps.diff-same.outputs.passed }}
+        run: |
+          echo "actual passed: $ACTUAL"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected passed=true for identical fixture files"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Show fixture file contents for deletion test
+        run: |
+          echo "=== file-base.txt (old) ==="
+          cat /tmp/file-base.txt
+          echo "=== file-fewer-lines.txt (new - has fewer lines) ==="
+          cat /tmp/file-fewer-lines.txt
+
+      - id: diff-deleted
+        uses: .
+        with:
+          old: /tmp/file-base.txt
+          new: /tmp/file-fewer-lines.txt
+          mode: deletion
+          tolerance: better
+
+      - name: Assert deletion fixture passes in deletion mode with tolerance=better
+        env:
+          ACTUAL: ${{ steps.diff-deleted.outputs.passed }}
+        run: |
+          echo "actual passed: $ACTUAL"
+          if [ "$ACTUAL" != "true" ]; then
+            echo "FAIL: expected passed=true when lines are deleted in deletion mode"
+            exit 1
+          fi
+          echo "PASS"
